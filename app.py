@@ -4,65 +4,20 @@ import pandas as pd
 import numpy as np
 from sklearn.neighbors import KNeighborsRegressor
 import time
-
-# 🔽 [신규] 실시간 분석을 위한 라이브러리 추가
 from pytrends.request import TrendReq
 import datetime 
 
-# --- 0. 페이지 스타일링 (기존과 동일) ---
-page_style = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+def load_css(file_name):
+    try:
+        with open(file_name) as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.error(f"❌ ERROR: 'style.css' 파일을 찾을 수 없습니다. app.py와 같은 폴더에 있는지 확인하세요.")
 
-/* 전역 폰트 설정 */
-html, body, [class*="st-"], .stButton>button {
-    font-family: 'Noto Sans KR', sans-serif;
-}
-/* ... (기존 스타일 코드는 동일하므로 생략) ... */
-.stButton>button {
-    background-color: #FF4B4B; /* Streamlit 빨간색 */
-    color: white;
-    font-size: 18px;
-    font-weight: 700;
-    padding: 1rem 2rem;
-    border-radius: 10px;
-    border: none;
-    transition: all 0.3s;
-}
-.user-input {
-    font-size: 24px;
-    font-weight: 500;
-    color: #1E90FF; /* 밝은 파란색 */
-    background-color: #1a1a2e; /* 어두운 배경 */
-    padding: 1rem;
-    border-radius: 8px;
-    border-left: 5px solid #1E90FF;
-    margin-top: 1rem;
-    margin-bottom: 1rem;
-}
-/* 카운트다운 숫자 스타일 (기존과 동일) */
-.result-text {
-    font-size: 8rem;
-    font-weight: 700;
-    text-align: center;
-    color: #FF4B4B; /* 붉은색 */
-    line-height: 1.2;
-}
-/* 부가 설명 텍스트 (기존과 동일) */
-.sub-text {
-    font-size: 1.2rem;
-    font-weight: 500;
-    text-align: center;
-    color: #FAFAFA;
-}
-</style>
-"""
 st.set_page_config(page_title="단어 멸망 시계", layout="centered")
-st.markdown(page_style, unsafe_allow_html=True)
-
+load_css("style.css")
 
 # --- 1. 모델 및 데이터 로드 (Streamlit 캐싱 사용) ---
-# 🔽 [수정됨] X축 피처를 'Max_Rising_Slope'로 변경
 @st.cache_resource
 def load_model_and_data():
     try:
@@ -175,10 +130,10 @@ def on_stt_button_click():
         except Exception as e:
             st.error(f"❌ STT 처리 중 알 수 없는 오류: {e}")
 
-
-# --- 5. 메인 스트림릿 앱 로직 ---
 def main():
-    st.title("🤖 단어 멸망 시계")
+    load_css("style.css")
+    st.video("img/smoke.mp4", start_time=0)
+    st.markdown('<h1 class="title-text"><span>☯︎단어 멸망 시계☯︎</span></h1>', unsafe_allow_html=True)
     st.markdown("<p>음성으로 신조어를 입력하면, '최대 상승 기울기'를 실시간 분석하여 수명을 예측합니다.</p>", unsafe_allow_html=True)
 
     # 1. 모델 로드
@@ -187,7 +142,7 @@ def main():
         return # 모델 로드 실패 시 중단
 
     # 2. STT 버튼
-    st.button("🔴 Click to Speak", on_click=on_stt_button_click, use_container_width=True)
+    st.button("Click to Speak", on_click=on_stt_button_click, use_container_width=True)
 
     # 3. [수정됨] STT 완료 후 '실시간 분석' 및 '예측' 로직
     if "text" in st.session_state and st.session_state.text:
@@ -254,7 +209,7 @@ def main():
             )
             
             # 디펜스 논리 설명
-            st.markdown(f'<p class=\"sub-text\" style=\"color: #AAA;\">{status_text}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="sub-text" style="color: #AAA;">{status_text}</p>', unsafe_allow_html=True)
             st.markdown(f"""
                 <p style='font-size: 16px; color: #E0E0E0;'>
                 이 예측은 <b>'{text}'</b>의 실시간 최대 상승 기울기 (<b>{realtime_slope:.2f}</b>)를 기반으로,
@@ -265,7 +220,6 @@ def main():
 
 
         except Exception as e:
-            # 429 오류 등 예외 처리
             if "429" in str(e):
                 st.error("❌ Google Trends 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.")
             else:
@@ -276,3 +230,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+st.markdown("""
+<div class="fog-container">
+  <div class="fog-img fog-img-first"></div>
+  <div class="fog-img fog-img-second"></div>
+</div>
+""", unsafe_allow_html=True)
