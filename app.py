@@ -55,7 +55,7 @@ def load_assets():
 def get_realtime_features_harmonized(word):
     try:
         pytrends = TrendReq(hl='ko-KR', tz=540)
-        time.sleep(1 + random.uniform(0, 2))
+        time.sleep(3 + random.uniform(0, 3))
         pytrends.build_payload([word], cat=0, timeframe='all', geo='KR')
         interest_df = pytrends.interest_over_time()
         if interest_df.empty or word not in interest_df.columns:
