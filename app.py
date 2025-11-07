@@ -121,7 +121,7 @@ def on_stt_button_click():
 # --- 3. CSS 로드 함수 (변경 없음) ---
 def load_css(file_name):
     try:
-        with open(file_name) as f:
+        with open(file_name, "r", encoding="utf-8") as f:
             st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
     except FileNotFoundError:
         st.error(f"❌ ERROR: 'style.css' 파일을 찾을 수 없습니다.")
