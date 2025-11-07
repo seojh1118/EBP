@@ -131,9 +131,10 @@ def main():
     load_css("style.css")
     
     try:
-        st.video("img/smoke.mp4", start_time=0) 
-    except FileNotFoundError:
-        st.warning("⚠️ 'img/smoke.mp4' 비디오 파일을 찾을 수 없습니다.")
+        st.video("img/smoke.mp4", start_time=0)
+    except Exception as e:
+        st.warning(f"비디오 파일을 불러올 수 없습니다: {e}")
+
     
     st.markdown('<h1 class="title-text"><span>☯︎단어 멸망 시계☯︎</span></h1>', unsafe_allow_html=True)
     st.markdown("<p>음성으로 신조어를 입력하면, 3가지 '유행 패턴'을 실시간 분석하여 수명을 예측합니다.</p>", unsafe_allow_html=True)
