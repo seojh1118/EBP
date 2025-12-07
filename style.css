@@ -1,194 +1,122 @@
-/* style.css */
+/* style.css - 전시회용 다크 테마 UI */
 
+/* 1. 폰트 임포트 (한글: Noto Sans, 영문/숫자: Rubik Beastly, Gowun Dodum) */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Rubik+Beastly&display=swap');
 
-
+/* 2. 기본 배경 및 폰트 설정 */
 html, body, .stApp {
-    background-color: #000000;
-}
-
-html, body, [class*="st-"], .stButton>button {
+    background-color: #000000; /* 완전한 검은색 (포그 효과 극대화) */
     font-family: 'Noto Sans KR', sans-serif;
+    color: #E0E0E0;
 }
 
+/* 3. Streamlit 기본 UI 숨기기 (전시용 필수) */
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
+.stDeployButton {display:none;}
+
+/* 4. 메인 타이틀 (단어 멸망 시계) */
 .title-text {
-    list-style: none;
+    margin: 0;
+    padding: 2rem 0;
     font-family: "Gowun Dodum", sans-serif;
-    font-size: 3rem;
+    font-size: 4.5rem; /* 제목 크기 키움 */
     color: #ffefef;
     text-align: center;
+    width: 100%;
     font-weight: bold;
-    letter-spacing: 0.2em;
-    filter: blur(1px);
-}
-
-.title-text span{
-    display: inline-block;
-}
-
-video{
-    object-fit: cover;
-}
-
-@keyframes animate{
-    0%{
-        opacity: 0;
-        transform: rotateY(90deg);
-        filter:blur(10px);
-    }
-    100%{
-        opacity: 1;
-        transform: rotateY(0deg);
-        filter: blur(0);
-    }
-}
-
-.stButton>button {
-    appearance: none;
-    background: #111;
-    background-color: #FFFFFF;
-    border: none;
-    border-radius: 40em;
-    border-style: none;
-    color: pink;
-    font-family: "Rubik Beastly", system-ui;
-    font-size: 3rem;
-    font-weight: 700;
-    letter-spacing: -.24px;
-    margin: 0;
-    outline: none;
-    padding: 1rem 1.3rem;
-    box-shadow: #ADCFFF 0 -12px 6px inset;
-    box-sizing: border-box;
-    transition: all 0.3s;
-    cursor: pointer;
-    display: inline-block;
-    quotes: auto;
-    z-index: 0;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    z-index: 10;
     position: relative;
+}
+
+/* 5. 입력된 단어 표시 */
+.user-input {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #00FFFF; /* 사이버펑크 시안(Cyan) 색상 */
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 15px;
+    border: 1px solid rgba(0, 255, 255, 0.3);
     text-align: center;
-    text-decoration: none;
-    transition: all .15s;
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: manipulation;
+    margin: 2rem 0;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
 }
 
-.stButton>button:before {
-    content: "";
-    background: linear-gradient(
-    45deg,
-    #5a4c4c,
-    #ddc8b6,
-    #dadada,
-    #ffffff,
-    #000000,
-    #4b4f62,
-    #3f3f3f,
-    #ffc6f3,
-    #fffafa
-    );
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    background-size: 100%;
-    z-index: -1;
-    filter: blur(2px);
-    -webkit-filter: blur(2px);
-    width: calc(100% + 1px);
-    height: calc(100% + 1px);
-    animation: glowing-stButton 20s linear infinite;
-    transition: opacity 0.3s ease-in-out;
-    border-radius: 40rem;
+/* 6. 결과 텍스트 (카운트다운 및 최종 결과) */
+.result-text {
+    font-family: 'Rubik Beastly', cursive; /* 거친 느낌의 폰트 */
+    font-size: 6rem;
+    font-weight: 400;
+    text-align: center;
+    line-height: 1.2;
+    margin-top: 1rem;
+    text-shadow: 2px 2px 0px #000;
 }
 
-@keyframes glowing-stButton {
-  0% {
-    background-position: 0 0;
-  }
-  50% {
-    background-position: 400% 0;
-  }
-  100% {
-    background-position: 0 0;
-  }
+/* 7. 버튼 스타일 (네온 글로우 효과) */
+.stButton>button {
+    width: 100%;
+    background-color: #111;
+    color: #fff;
+    border: 1px solid #333;
+    border-radius: 8px;
+    font-size: 1.5rem;
+    padding: 0.8rem;
+    transition: all 0.3s ease;
+    font-family: 'Gowun Dodum', sans-serif;
+}
+
+.stButton>button:hover {
+    border-color: #00FFFF;
+    color: #00FFFF;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    transform: translateY(-2px);
 }
 
 .stButton>button:active {
-  transform: scale(1.025);
+    transform: scale(0.98);
 }
 
-.stButton>button:after {
-    z-index: -1;
-    content: "";
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: black;
-    left: 0;
-    top: 0;
-    border-radius: 40em;
-    box-shadow: #ADCFFF 0 -12px 6px inset;
-    box-sizing: border-box;
-}
-
-/* 5. 입력된 단어 텍스트 (파란색) */
-.user-input {
-    font-size: 24px;
-    font-weight: 500;
-    color: #1E90FF; /* 밝은 파란색 */
-    background-color: #1a1a2e; /* 어두운 배경 */
-    padding: 1rem;
+/* 8. 텍스트 입력창 (키보드 모드용) */
+.stTextInput>div>div>input {
+    font-size: 1.5rem;
+    background-color: #1a1a1a;
+    color: white;
+    border: 1px solid #444;
     border-radius: 8px;
-    border-left: 5px solid #1E90FF;
-    margin-top: 1rem;
-    margin-bottom: 1rem;
-}
-
-/* 6. 카운트다운 숫자 (붉은색) */
-.result-text {
-    font-size: 8rem;
-    font-weight: 700;
     text-align: center;
-    color: #FF4B4B; /* 붉은색 */
-    line-height: 1.2;
 }
 
-/* 7. st.metric (기울기, 활성개월) 상자 (기본) */
-.stMetric {
-    background-color: #262730;
-    border-radius: 10px;
-    padding: 1.5rem;
-}
-.stMetric > label { font-weight: 500; color: #AAA; }
-.stMetric > div[data-testid="stMetricValue"] {
-    font-size: 2.0rem; 
-    font-weight: 500;
-    color: #FFFFFF; 
+.stTextInput>div>div>input:focus {
+    border-color: #00FFFF;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
 }
 
-/* 8. st.success, st.info (기본) */
-.stInfo {
-    background-color: #1a1a2e;
-    border-left: 5px solid #1E90FF;
-    color: #E0E0E0;
-    font-size: 15px;
-}
-.stSuccess {
-    background-color: #042f1a;
-    border-left: 5px solid #008000;
-    color: #FFFFFF;
-}
-
-/* 11. 부가 설명 텍스트 (회색) */
-.sub-text {
-    font-size: 1.2rem;
-    font-weight: 500;
-    text-align: center;
-    color: #FAFAFA;
+/* 9. 라디오 버튼 (입력 방식 선택) - 스타일 개선 */
+.stRadio > div {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    background-color: rgba(255, 255, 255, 0.1); /* 배경 박스 추가 */
+    padding: 10px 20px;
+    border-radius: 15px;
+    width: fit-content;
+    margin: 0 auto 20px auto; /* 중앙 정렬 및 아래 여백 */
 }
 
+/* 라디오 버튼 텍스트 (완전 흰색) */
+.stRadio label p {
+    color: #FFFFFF !important; 
+    font-size: 1.3rem !important;
+    font-weight: bold;
+}
+
+/* 10. 안개 효과 (Fog Animation) - 하단에 깔림 */
 .fog-container {
     position: fixed;
     bottom: 0;
@@ -196,43 +124,50 @@ video{
     width: 100%;
     height: 100%; 
     overflow: hidden;
-    z-index: 1;
+    z-index: -1; /* 콘텐츠 뒤로 */
     pointer-events: none;
 }
 
-.fog {
-    position: relative;
-    bottom: 0;
-    width: 100%;
-    height: 100vh;
-    background: transparent;
-}
-
-
-.fog-img{
+.fog-img {
     position: absolute;
     height: 100vh;
     width: 300vw;
-    z-index: 2;
+    z-index: 1;
+    opacity: 0.5;
 }
 
-.fog-img-first{
-    background: url("../img/fog-1.png");
-    background-repeat: repeat-x;
+.fog-img-first {
+    background: url("https://raw.githubusercontent.com/danielstuart14/CSS_FOG_ANIMATION/master/fog1.png") repeat-x;
     background-size: contain;
-    background-position: center;
     animation: marquee 60s linear infinite;
 }
 
-.fog-img-second{
-    background: url("../img/fog-2.png");
-    background-repeat: repeat-x;
+.fog-img-second {
+    background: url("https://raw.githubusercontent.com/danielstuart14/CSS_FOG_ANIMATION/master/fog2.png") repeat-x;
     background-size: contain;
-    background-position: center;
-    animation: marquee 60s linear infinite;
+    animation: marquee 40s linear infinite;
 }
 
 @keyframes marquee {
-    0% { transform: translate3d(0,0,0); }
-    100% { transform: translate3d(-200vw,0,0); }
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-200vw, 0, 0); }
+}
+
+/* 11. 메트릭 박스 (결과 수치 표시) */
+[data-testid="stMetric"] {
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: 1rem !important;
+    color: #aaa !important;
+}
+
+[data-testid="stMetricValue"] {
+    font-size: 1.8rem !important;
+    color: #fff !important;
 }
