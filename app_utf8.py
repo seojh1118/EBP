@@ -4,7 +4,6 @@ import time
 import random 
 import requests
 import os
-import datetime
 import re
 import json 
 import pandas as pd
@@ -14,13 +13,14 @@ import base64
 from pytrends.request import TrendReq
 from gtts import gTTS
 import pygame
+import datetime
 import plotly.express as px
 import plotly.graph_objects as go 
 from openai import OpenAI
 
 STATE_FILE = "state.json"
 GUIDE_FILE = "guide_voice.mp3" 
-UPSTAGE_API_KEY = "up_PNXUPbQH9s3ATByYfA4m90NpL0DQe" 
+UPSTAGE_API_KEY = "up_PNXUPbQH9s3ATByYfA4m90NpL0DQes" 
 IMMORTAL_WORDS = [
     "엄마", "아빠", "사랑", "가족", "친구", "학교", "선생님", "밥", "물", "집", 
     "나", "너", "우리", "대한민국", "한국", "서울", "행복", "사람", "하늘", "바다",
@@ -129,6 +129,27 @@ def play_guide_voice():
         while pygame.mixer.music.get_busy():
             time.sleep(0.1)
     except: pass
+
+def play_analysis_voice(text):
+    """
+    "입력하신 단어 X의 수명을 분석중입니다" 음성 생성 및 재생
+    """
+    filename = "analysis.mp3"
+    try:
+        if pygame.mixer.get_init():
+            pygame.mixer.music.stop()
+        else:
+            pygame.mixer.init()
+
+        tts = gTTS(text=f"입력하신 단어, {text}의 수명을 분석중입니다.", lang='ko')
+        tts.save(filename)
+        
+        pygame.mixer.music.load(filename)
+        pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy():
+            time.sleep(0.1)
+    except Exception:
+        pass
 
 def on_stt_button_click():
     r = sr.Recognizer()
@@ -329,7 +350,8 @@ def main():
         st.markdown(f"<div class='user-input'>입력된 단어: \"{text}\"</div>", unsafe_allow_html=True)
 
         update_projector("#9900FF", "분석 중...", "analyzing")
-        
+        play_analysis_voice(text)
+
         months = 0
         example = None
         series = None
@@ -356,7 +378,7 @@ def main():
                 months = KNOWN_SLANGS[text]
                 llm_result = analyze_with_upstage(text)
                 if llm_result:
-                    example = llm_result.get('example') 
+                    example = llm_result.get('example')
                 _, series = generate_simulation_data(text, months)
             
             else:
@@ -368,12 +390,12 @@ def main():
                         st.stop()
                     
                     months = int(llm_result.get('months', 12))
-                    example = llm_result.get('example') 
+                    example = llm_result.get('example')
                     _, series = generate_simulation_data(text, months)
                 else:
                     random.seed(hash(text))
                     months = random.randint(3, 60)
-                    example = None
+                    example = None 
                     _, series = generate_simulation_data(text, months)
 
         if months <= 0:
@@ -396,7 +418,6 @@ def main():
         update_projector(color, text, "result", status_msg)
         
         st.success(f"✅ 예측 결과: {status_msg}")
-        
         if example:
             st.info(f"💬 AI가 만든 예문: \"{example}\"")
         
