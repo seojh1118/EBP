@@ -17,6 +17,7 @@ import datetime
 import plotly.express as px
 import plotly.graph_objects as go 
 from openai import OpenAI
+import streamlit.components.v1 as components
 
 STATE_FILE = "state.json"
 GUIDE_FILE = "guide_voice.mp3" 
@@ -54,6 +55,20 @@ def update_projector(color, main_text, status="active", sub_text=""):
             json.dump(state, f)
     except Exception as e:
         print(f"Projector Update Error: {e}")
+
+def safe_reset_to_standby():
+    """
+    에러, 무반응 등 어떤 상황에서도
+    앱 상태 + 프로젝터를 안전하게 대기모드로 돌리는 공통 함수
+    """
+    try:
+        update_projector("#000000", "", "standby")
+    except:
+        pass
+
+    if "text" in st.session_state:
+        del st.session_state["text"]
+
 
 def check_is_standard_word(word):
     if word in IMMORTAL_WORDS: return True
@@ -155,67 +170,50 @@ def on_stt_button_click():
     r = sr.Recognizer()
     try:
         play_guide_voice()
+        update_projector("#FFFF00", "청취 중...", "listening")
+
         with sr.Microphone() as source:
             st.toast("👂 듣고 있습니다...", icon="🎙️")
-            update_projector("#FFFF00", "청취 중...", "listening") 
             r.adjust_for_ambient_noise(source, duration=0.5)
-            audio = r.listen(source, timeout=5, phrase_time_limit=3)
-            st.session_state.text = r.recognize_google(audio, language='ko-KR')
-    except sr.WaitTimeoutError:
-        st.warning("⚠️ 입력 시간이 초과되었습니다.")
-        update_projector("#000000", "", "standby")
+
+            try:
+                # 너무 길게 안 끌고 가게 timeout / phrase_time_limit 설정
+                audio = r.listen(source, timeout=6, phrase_time_limit=4)
+            except sr.WaitTimeoutError:
+                st.warning("⚠️ 시간이 지나 음성이 감지되지 않았습니다. 대기모드로 돌아갑니다.")
+                safe_reset_to_standby()
+                return
+
+        # 음성 → 텍스트
+        try:
+            text = r.recognize_google(audio, language='ko-KR').strip()
+        except Exception:
+            text = ""
+
+        if not text:
+            st.warning("⚠️ 음성이 제대로 인식되지 않았습니다. 다시 시도해주세요.")
+            safe_reset_to_standby()
+            return
+
+        # 정상 인식
+        st.session_state.text = text
+        # 상태 머신 상 listening → analyzing 으로 넘어갈 준비
+        # (실제 analyzing 상태 전환은 main() 쪽에서)
     except Exception as e:
-        st.error(f"오류: {e}")
-        update_projector("#000000", "", "standby")
+        st.error(f"음성 인식 오류: {e}")
+        safe_reset_to_standby()
+
 
 def load_css():
     if os.path.exists("style.css"):
         with open("style.css", "r", encoding="utf-8") as f:
             st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-def analyze_with_upstage(word):
-    if not UPSTAGE_API_KEY:
-        return None 
-    try:
-        client = OpenAI(
-            api_key=UPSTAGE_API_KEY,
-            base_url="https://api.upstage.ai/v1/solar"
-        )
-        prompt = f"""
-        단어: "{word}"
-        역할: 한국어 신조어 및 밈 전문가.
-        작업: 위 단어에 대한 분석 정보를 JSON으로 응답.
-        
-        [필수 응답 형식]
-        {{
-            "is_offensive": false,  
-            "months": 24,           
-            "example": "..."         
-        }}
-        
-        [가이드라인]
-        - example: 이 단어를 사용한 가장 자연스럽고 재치 있는 한국어 예문 한 문장. (인터넷 댓글이나 대화체 느낌)
-        - months: 예상 수명 (0~60). 비속어면 0.
-        - 예시 (단어: 중꺾마): "이번 시험 망쳤지만 괜찮아, 중요한 건 꺾이지 않는 마음이니까!"
-        """
-        response = client.chat.completions.create(
-            model="solar-1-mini-chat",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.8
-        )
-        content = response.choices[0].message.content
-        content = re.sub(r'```json\s*|\s*```', '', content).strip()
-        result = json.loads(content)
-        return result
-    except Exception as e:
-        print(f"Upstage API Error: {e}")
-        return None 
 
-def main():
-    st.set_page_config(page_title="단어 멸망 시계", layout="centered") 
-    load_css()
-    
-    st.markdown("""
+def render_clock_hud():
+    # 1) 시계 + STATUS HUD 그대로 유지
+    components.html(
+        """
 <style>
 .clock-container {
     position: fixed; top: 20px; left: 20px; z-index: 9999; 
@@ -239,7 +237,7 @@ def main():
 .dot { height: 8px; width: 8px; background-color: #00FF00; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px #00FF00; animation: blink 1s infinite; }
 .bar-container { width: 80px; height: 5px; background: #333; margin-top: 2px; }
 .bar-fill { height: 100%; background: #FF00FF; width: 0%; animation: loadBar 2s infinite; }
-.equalizer { display: flex; gap: 3px; height: 30px; align-items: flex-end; margin-top: 5px; }
+.equalizer { display: flex; gap: 30px; height: 30px; align-items: flex-end; margin-top: 5px; }
 .eq-bar { width: 5px; background: #00FFFF; animation: eqAnim 0.5s infinite ease-in-out alternate; }
 @keyframes blink { 50% { opacity: 0.3; } }
 @keyframes loadBar { 0% { width: 10%; } 50% { width: 90%; } 100% { width: 40%; } }
@@ -251,13 +249,11 @@ def main():
     <div class="digital-clock"><div class="label">NEW YORK (EST)</div><div class="time" data-timezone="America/New_York">--:--:--</div></div>
     <div class="digital-clock"><div class="label">LONDON (GMT)</div><div class="time" data-timezone="Europe/London">--:--:--</div></div>
     <div class="digital-clock"><div class="label">PARIS (CET)</div><div class="time" data-timezone="Europe/Paris">--:--:--</div></div>
-    <div class="digital-clock"><div class="label">ROME (CET)</div><div class="time" data-timezone="Europe/Rome">--:--:--</div></div>
-    <div class="digital-clock"><div class="label">BERLIN (CET)</div><div class="time" data-timezone="Europe/Berlin">--:--:--</div></div>
+    <div class="digital-clock"><div class="label">WARSAW</div><div class="time" data-timezone="Europe/Warsaw">--:--:--</div></div>
+    <div class="digital-clock"><div class="label">MOSCOW</div><div class="time" data-timezone="Europe/Moscow">--:--:--</div></div>
     <div class="digital-clock"><div class="label">SINGAPORE</div><div class="time" data-timezone="Asia/Singapore">--:--:--</div></div>
-    <div class="digital-clock"><div class="label">KUALA LUMPUR</div><div class="time" data-timezone="Asia/Kuala_Lumpur">--:--:--</div></div>
     <div class="digital-clock"><div class="label">BEIJING</div><div class="time" data-timezone="Asia/Shanghai">--:--:--</div></div>
     <div class="digital-clock"><div class="label">TOKYO</div><div class="time" data-timezone="Asia/Tokyo">--:--:--</div></div>
-    <div class="digital-clock"><div class="label">HANOI</div><div class="time" data-timezone="Asia/Ho_Chi_Minh">--:--:--</div></div>
     <div class="digital-clock"><div class="label">SYDNEY</div><div class="time" data-timezone="Australia/Sydney">--:--:--</div></div>
     <div class="digital-clock"><div class="label">MEXICO CITY</div><div class="time" data-timezone="America/Mexico_City">--:--:--</div></div>
     <div class="digital-clock"><div class="label">TORONTO</div><div class="time" data-timezone="America/Toronto">--:--:--</div></div>
@@ -319,8 +315,122 @@ def main():
     }, 200);
 })();
 </script>
-""", unsafe_allow_html=True)
-    
+        """,
+        height=450,      # 이 높이만큼 gap 생김
+        scrolling=False,
+    )
+
+    # 2) gap 만큼 메인 컨테이너를 위로 당기기
+    st.markdown(
+        """
+        <style>
+        section.main > div.block-container {
+            margin-top: -1000px !important;
+            padding-top: 0px !important;
+        }
+        iframe[title="streamlit.components.v1.html"] {
+            margin-top: -500px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+
+
+def analyze_with_upstage(word):
+    if not UPSTAGE_API_KEY:
+        return None 
+    try:
+        client = OpenAI(
+            api_key=UPSTAGE_API_KEY,
+            base_url="https://api.upstage.ai/v1/solar"
+        )
+        prompt = f"""
+        단어: "{word}"
+        역할: 한국어 신조어 및 밈 전문가.
+        작업: 위 단어에 대한 분석 정보를 JSON으로 응답.
+        
+        [필수 응답 형식]
+        {{
+            "is_offensive": false,  
+            "months": 24,           
+            "example": "..."         
+        }}
+        
+        [가이드라인]
+        - example: 이 단어를 사용한 가장 자연스럽고 재치 있는 한국어 예문 한 문장. (인터넷 댓글이나 대화체 느낌)
+        - months: 예상 수명 (0~60). 비속어면 0.
+        - 예시 (단어: 중꺾마): "이번 시험 망쳤지만 괜찮아, 중요한 건 꺾이지 않는 마음이니까!"
+        """
+        response = client.chat.completions.create(
+            model="solar-1-mini-chat",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.8
+        )
+        content = response.choices[0].message.content
+        content = re.sub(r'```json\s*|\s*```', '', content).strip()
+        result = json.loads(content)
+        return result
+    except Exception as e:
+        print(f"Upstage API Error: {e}")
+        return None 
+
+def main():
+    st.set_page_config(page_title="단어 멸망 시계", layout="wide") 
+    load_css()
+    render_clock_hud()
+
+
+    if "started" not in st.session_state:
+        st.session_state.started = False
+
+    _, col_center, _ = st.columns([1, 2, 1])
+
+        # 추후수정 아직 체험 시작 전이면 인트로/튜토리얼 화면만 보여주고 return
+    if not st.session_state.started:
+        st.markdown(
+            """
+            <h1 class="title-text"><span>☯︎단어 멸망 시계☯︎</span></h1>
+            <p style='text-align:center; color:#ccc; margin-top:0.5rem;'>
+                인터넷에서 태어나는 신조어들이<br>
+                얼마나 오래 살아남을지 예측하는 언어 실험입니다.
+            </p>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            """
+            <div style="background:rgba(0,0,0,0.5); padding:1rem; border-radius:0.5rem; margin-top:1rem;">
+              <b>체험 방법</b><br>
+              1. 🎙️ 버튼을 누르고 요즘 쓰는 신조어를 말하거나,<br>
+              2. ⌨️ 입력 창에 직접 단어를 적습니다.<br>
+              3. AI가 단어의 '유행 수명'과 그래프를 계산합니다.<br>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            """
+            <p style='text-align:center; color:#aaa; margin-top:1rem;'>
+              예시 단어: <code>중꺾마</code>, <code>갓생</code>, <code>킹받네</code>, <code>머선129</code> ...
+            </p>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if st.button("▶ 체험 시작", use_container_width=True):
+            st.session_state.started = True
+            safe_reset_to_standby()
+            st.rerun()
+
+        # 인트로 단계에서는 아래 로직 실행 안 함
+        return
+
+
     if not os.path.exists(STATE_FILE):
         update_projector("#000000", "", "standby")
 
@@ -346,106 +456,111 @@ def main():
                 st.session_state.text = user_text
 
     if "text" in st.session_state and st.session_state.text:
-        text = st.session_state.text.strip()
-        st.markdown(f"<div class='user-input'>입력된 단어: \"{text}\"</div>", unsafe_allow_html=True)
-
-        update_projector("#9900FF", "분석 중...", "analyzing")
-        play_analysis_voice(text)
-
-        months = 0
-        example = None
-        series = None
-        status_msg = ""
-        color = "#000000"
-        
-        bad_words = ["시발", "병신", "개새", "존나", "졸라", "충", "느금", "미친", "닥쳐", "씨발", "좆"] 
-        if any(bw in text for bw in bad_words):
-            st.error("🚫 비속어 감지됨")
-            update_projector("#FF0000", "비속어", "result", "FILTERED")
-            st.stop()
-
-        if check_is_standard_word(text):
-            st.success(f"♾️ 영생 (표준어): {text}")
-            update_projector("#BC13FE", text, "result", "영생 (Immortal)")
-            if st.button("초기화"): 
+       try:
+            text = st.session_state.text.strip()
+            st.markdown(f"<div class='user-input'>입력된 단어: \"{text}\"</div>", unsafe_allow_html=True)
+            update_projector("#9900FF", "분석 중...", "analyzing")
+            play_analysis_voice(text)
+           
+            months = 0
+            example = None
+            series = None
+            status_msg = ""
+            color = "#000000"
+                   
+            bad_words = ["시발", "병신", "개새", "존나", "졸라", "충", "느금", "미친", "닥쳐", "씨발", "좆"] 
+            if any(bw in text for bw in bad_words):
+                st.error("🚫 비속어 감지됨")
+                update_projector("#FF0000", "비속어", "result", "FILTERED")
+                st.stop()
+           
+            if check_is_standard_word(text):
+                st.success(f"♾️ 영생 (표준어): {text}")
+                update_projector("#BC13FE", text, "result", "영생 (Immortal)")
+                if st.button("초기화"): 
+                    update_projector("#000000", "", "standby")
+                    del st.session_state.text
+                    st.rerun()
+                st.stop()
+           
+            with st.spinner("AI가 유행 패턴과 예문을 생성 중입니다..."):
+                if text in KNOWN_SLANGS:
+                    months = KNOWN_SLANGS[text]
+                    llm_result = analyze_with_upstage(text)
+                    if llm_result:
+                        example = llm_result.get('example')
+                    _, series = generate_simulation_data(text, months)
+                       
+                else:
+                    llm_result = analyze_with_upstage(text)
+                    if llm_result:
+                        if llm_result.get('is_offensive'):
+                            st.error("🚫 비속어 감지됨")
+                            update_projector("#FF0000", "비속어", "result", "FILTERED")
+                            st.stop()
+                               
+                        months = int(llm_result.get('months', 12))
+                        example = llm_result.get('example')
+                        _, series = generate_simulation_data(text, months)
+                    else:
+                        random.seed(hash(text))
+                        months = random.randint(3, 60)
+                        example = None 
+                        _, series = generate_simulation_data(text, months)
+           
+            if months <= 0:
+                color = "#880000" 
+                status_msg = "소멸 (DEAD)"
+            elif months < 12:
+                color = "#FF4500" 
+                status_msg = f"수명: {months}개월"
+            elif months < 36:
+                color = "#00FF00" 
+                status_msg = f"수명: {months}개월"
+            else:
+                color = "#0000FF" 
+                status_msg = f"수명: {months}개월"
+           
+            for i in range(5, 0, -1):
+                update_projector("#FFFFFF", str(i), "countdown", "") 
+                time.sleep(1.0) 
+           
+            update_projector(color, text, "result", status_msg)
+                   
+            st.success(f"✅ 예측 결과: {status_msg}")
+            if example:
+                st.info(f"💬 AI가 만든 예문: \"{example}\"")
+                   
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("예측 수명", status_msg)
+            col2.metric("상태", "양호" if months > 12 else "위험")
+                   
+            if series is not None:
+                chart_df = series.reset_index()
+                chart_df.columns = ['Date', 'Interest']
+                fig = px.line(chart_df, x='Date', y='Interest')
+                fig.update_layout(
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='#E0E0E0'),
+                    xaxis=dict(showgrid=False, title="", showticklabels=True),
+                    yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)', title=""),
+                    margin=dict(l=0, r=0, t=20, b=20),
+                    hovermode="x unified"
+                )
+                fig.update_traces(line_color='#BC13FE', line_width=4)
+                st.plotly_chart(fig, use_container_width=True, theme=None, config={'displayModeBar': False})
+           
+            st.divider()
+            if st.button("초기화 (대기모드)"):
                 update_projector("#000000", "", "standby")
                 del st.session_state.text
+                safe_reset_to_standby()
                 st.rerun()
+       except Exception as e:
+            st.error(f"예기치 못한 오류가 발생했습니다: {e}")
+            safe_reset_to_standby()
             st.stop()
-
-        with st.spinner("AI가 유행 패턴과 예문을 생성 중입니다..."):
-            if text in KNOWN_SLANGS:
-                months = KNOWN_SLANGS[text]
-                llm_result = analyze_with_upstage(text)
-                if llm_result:
-                    example = llm_result.get('example')
-                _, series = generate_simulation_data(text, months)
-            
-            else:
-                llm_result = analyze_with_upstage(text)
-                if llm_result:
-                    if llm_result.get('is_offensive'):
-                        st.error("🚫 비속어 감지됨")
-                        update_projector("#FF0000", "비속어", "result", "FILTERED")
-                        st.stop()
-                    
-                    months = int(llm_result.get('months', 12))
-                    example = llm_result.get('example')
-                    _, series = generate_simulation_data(text, months)
-                else:
-                    random.seed(hash(text))
-                    months = random.randint(3, 60)
-                    example = None 
-                    _, series = generate_simulation_data(text, months)
-
-        if months <= 0:
-            color = "#880000" 
-            status_msg = "소멸 (DEAD)"
-        elif months < 12:
-            color = "#FF4500" 
-            status_msg = f"수명: {months}개월"
-        elif months < 36:
-            color = "#00FF00" 
-            status_msg = f"수명: {months}개월"
-        else:
-            color = "#0000FF" 
-            status_msg = f"수명: {months}개월"
-
-        for i in range(5, 0, -1):
-            update_projector("#FFFFFF", str(i), "countdown", "") 
-            time.sleep(1.0) 
-
-        update_projector(color, text, "result", status_msg)
-        
-        st.success(f"✅ 예측 결과: {status_msg}")
-        if example:
-            st.info(f"💬 AI가 만든 예문: \"{example}\"")
-        
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("예측 수명", status_msg)
-        col2.metric("상태", "양호" if months > 12 else "위험")
-        
-        if series is not None:
-            chart_df = series.reset_index()
-            chart_df.columns = ['Date', 'Interest']
-            fig = px.line(chart_df, x='Date', y='Interest')
-            fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)', 
-                plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='#E0E0E0'),
-                xaxis=dict(showgrid=False, title="", showticklabels=True),
-                yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)', title=""),
-                margin=dict(l=0, r=0, t=20, b=20),
-                hovermode="x unified"
-            )
-            fig.update_traces(line_color='#BC13FE', line_width=4)
-            st.plotly_chart(fig, use_container_width=True, theme=None, config={'displayModeBar': False})
-
-        st.divider()
-        if st.button("초기화 (대기모드)"):
-            update_projector("#000000", "", "standby")
-            del st.session_state.text
-            st.rerun()
 
 if __name__ == "__main__":
     main()
