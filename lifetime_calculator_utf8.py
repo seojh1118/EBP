@@ -1,8 +1,6 @@
 import pandas as pd
 import numpy as np
 import os
-
-# 1. 원본 데이터 로드
 try:
     df = pd.read_csv('all_word_trends.csv', index_col='date', parse_dates=True)
 except FileNotFoundError:
@@ -10,23 +8,21 @@ except FileNotFoundError:
     print("먼저 data_collector.py를 실행하세요.")
     exit()
 
-feature_data = [] # X 피처 (초기 단서)
+feature_data = [] # X 피처
 lifetime_data = [] # Y (수명)
 
 print("데이터셋 분석 및 피처 계산 시작...")
 
-# 2. 각 단어별로 반복하며 피처 및 수명 계산
 for column in df.columns:
     series = df[column].dropna()
     if series.empty:
         continue
 
-    # --- 3. [X 피처] '초기 단서' 계산 ---
     
     # [피처 1: Word_Length]
     word_len = len(column.replace(" ", ""))
 
-    # '초기 1년치' 데이터만 추출 (신조어 예측과 동일한 조건)
+    # '초기 1년치' 데이터만 추출 
     try:
         start_date = series.first_valid_index()
         one_year_later = start_date + pd.DateOffset(years=1)
@@ -55,7 +51,7 @@ for column in df.columns:
         initial_decay_rate = after_peak_series.mean()
         initial_decay_rate = 0 if pd.isna(initial_decay_rate) else initial_decay_rate
 
-    # --- 4. [Y 피처] '전체 수명' 계산 ---
+    # --- [Y 피처] '전체 수명' ---
     
     peak_value = series.max()
     if peak_value < 10: # 유의미한 유행이 아니면 제외
@@ -73,22 +69,19 @@ for column in df.columns:
     if start_date is None:
         continue
 
-    # 소멸점 찾기 (Peak 이후)
     after_peak_series_full = series.loc[peak_date:]
     end_date_series = after_peak_series_full[after_peak_series_full < end_threshold]
     
-    final_months = 'Ongoing' # 기본값 (진행형)
+    final_months = 'Ongoing' 
     
     if not end_date_series.empty:
         end_date = end_date_series.first_valid_index()
         if end_date is not None:
-            # 수명 계산 (월 단위)
             lifetime = (end_date - start_date)
             final_months = int(lifetime.days / 30)
             if final_months <= 0: # 1달 미만은 1로 처리
                 final_months = 1
 
-    # 5. 데이터 저장
     feature_data.append({
         'Word': column, 
         'Word_Length': word_len, 
@@ -98,7 +91,6 @@ for column in df.columns:
         'Lifetime (Months)': final_months
     })
 
-# 6. CSV 파일로 저장
 final_df = pd.DataFrame(feature_data)
 final_df = final_df.set_index('Word')
 
@@ -106,4 +98,5 @@ print("\n--- 4-Feature 기반 훈련 데이터셋 ---")
 print(final_df.head())
 
 final_df.to_csv('final_training_dataset.csv')
+
 print(f"\n✅ 'final_training_dataset.csv' 파일 생성 완료! (총 {len(final_df)}개 단어)")
