@@ -57,10 +57,6 @@ def update_projector(color, main_text, status="active", sub_text=""):
         print(f"Projector Update Error: {e}")
 
 def safe_reset_to_standby():
-    """
-    에러, 무반응 등 어떤 상황에서도
-    앱 상태 + 프로젝터를 안전하게 대기모드로 돌리는 공통 함수
-    """
     try:
         update_projector("#000000", "", "standby")
     except:
@@ -146,9 +142,6 @@ def play_guide_voice():
     except: pass
 
 def play_analysis_voice(text):
-    """
-    "입력하신 단어 X의 수명을 분석중입니다" 음성 생성 및 재생
-    """
     filename = "analysis.mp3"
     try:
         if pygame.mixer.get_init():
@@ -177,7 +170,6 @@ def on_stt_button_click():
             r.adjust_for_ambient_noise(source, duration=0.5)
 
             try:
-                # 너무 길게 안 끌고 가게 timeout / phrase_time_limit 설정
                 audio = r.listen(source, timeout=6, phrase_time_limit=4)
             except sr.WaitTimeoutError:
                 st.warning("⚠️ 시간이 지나 음성이 감지되지 않았습니다. 대기모드로 돌아갑니다.")
@@ -195,10 +187,7 @@ def on_stt_button_click():
             safe_reset_to_standby()
             return
 
-        # 정상 인식
         st.session_state.text = text
-        # 상태 머신 상 listening → analyzing 으로 넘어갈 준비
-        # (실제 analyzing 상태 전환은 main() 쪽에서)
     except Exception as e:
         st.error(f"음성 인식 오류: {e}")
         safe_reset_to_standby()
@@ -211,7 +200,6 @@ def load_css():
 
 
 def render_clock_hud():
-    # 1) 시계 + STATUS HUD 그대로 유지
     components.html(
         """
 <style>
@@ -316,11 +304,10 @@ def render_clock_hud():
 })();
 </script>
         """,
-        height=450,      # 이 높이만큼 gap 생김
+        height=450,     
         scrolling=False,
     )
 
-    # 2) gap 만큼 메인 컨테이너를 위로 당기기
     st.markdown(
         """
         <style>
@@ -387,12 +374,10 @@ def main():
         st.session_state.started = False
 
     _, col_center, _ = st.columns([1, 2, 1])
-
-        # 추후수정 아직 체험 시작 전이면 인트로/튜토리얼 화면만 보여주고 return
     if not st.session_state.started:
         st.markdown(
             """
-            <h1 class="title-text"><span>☯︎단어 멸망 시계☯︎</span></h1>
+            <h1 class="title-text"><span>⏰ c단어l멸o망c시계k 🕰️</span></h1>
             <p style='text-align:center; color:#ccc; margin-top:0.5rem;'>
                 인터넷에서 태어나는 신조어들이<br>
                 얼마나 오래 살아남을지 예측하는 언어 실험입니다.
@@ -426,8 +411,6 @@ def main():
             st.session_state.started = True
             safe_reset_to_standby()
             st.rerun()
-
-        # 인트로 단계에서는 아래 로직 실행 안 함
         return
 
 
@@ -440,7 +423,7 @@ def main():
             st.markdown(f'<video autoplay muted loop playsinline style="width:100%; opacity:0.6;"><source src="data:video/mp4;base64,{v_b64}"></video>', unsafe_allow_html=True)
         except: pass
 
-    st.markdown('<h1 class="title-text"><span>☯︎단어 멸망 시계☯︎</span></h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="title-text"><span>⏰ c단어l멸o망c시계k 🕰️</span></h1>', unsafe_allow_html=True)
     
     input_method = st.radio("입력 방식 선택:", ["🎙️ 음성으로 입력", "⌨️ 키보드로 입력"], horizontal=True, label_visibility="collapsed")
 
@@ -468,7 +451,7 @@ def main():
             status_msg = ""
             color = "#000000"
                    
-            bad_words = ["시발", "병신", "개새", "존나", "졸라", "충", "느금", "미친", "닥쳐", "씨발", "좆"] 
+            bad_words = ["시발", "병신", "개새", "존나", "졸라", "충", "느금", "미친", "씨발"] 
             if any(bw in text for bw in bad_words):
                 st.error("🚫 비속어 감지됨")
                 update_projector("#FF0000", "비속어", "result", "FILTERED")
@@ -564,3 +547,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
