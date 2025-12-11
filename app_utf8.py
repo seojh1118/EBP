@@ -21,7 +21,7 @@ import streamlit.components.v1 as components
 
 STATE_FILE = "state.json"
 GUIDE_FILE = "guide_voice.mp3" 
-UPSTAGE_API_KEY = "up_PNXUPbQH9s3ATByYfA4m90NpL0DQes" 
+UPSTAGE_API_KEY = "up_PNXUPbQH9s3ATByYfA4m90NpL0DQe" 
 IMMORTAL_WORDS = [
     "엄마", "아빠", "사랑", "가족", "친구", "학교", "선생님", "밥", "물", "집", 
     "나", "너", "우리", "대한민국", "한국", "서울", "행복", "사람", "하늘", "바다",
